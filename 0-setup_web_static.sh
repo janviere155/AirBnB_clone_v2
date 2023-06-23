@@ -1,39 +1,30 @@
 #!/usr/bin/env bash
-# Sets up the web servers for the deployment of web_static
+# A bash script that sets up web servers for the depolyment of web static
+# !# Install nginx if not installed already
+# Creates the required directories
+# Creates a fake HTML file for test
+# Create a symbolic link
+# sets ownership of folder, updates and restarts nginx
+# exits successfully
 
-# Update package lists
-apt update
+sudo apt-get update
+sudo apt-get -y install nginx
 
-# Install Nginx
-apt install -y nginx
+sudo mkdir -p /data/
+sudo mkdir -p /data/web_static/
+sudo mkdir -p /data/web_static/releases/
+sudo mkdir -p /data/web_static/shared/
+sudo mkdir -p /data/web_static/releases/test/
+sudo touch  /data/web_static/releases/test/index.html
 
-# - Create the folders, if they don't yet exist:
-#   * '/data'
-#   * '/data/web_static/'
-#   * '/data/web_static/releases/'
-#   * '/data/web_static/releases/test/'
-#   * '/data/web_static/shared/'
-mkdir -p /data/web_static/releases/test/
-mkdir -p /data/web_static/shared/
+echo "<html><head><title>Test HTML file</title></head><body>This is a test HTML file.</body></html>" | sudo tee /data/web_static/releases/test/index.html
 
-# Create a fake HTML file '/data/web_static/releases/test/index.html',
-# (with simple content, to test Nginx configuration)
-printf "<html>\n\t<head>\n\t</head>\n\t<body>\n\t\tHolberton School\n\t</body>\n</html>\n" | 
-tee /data/web_static/releases/test/index.html 
+sudo ln -sf /data/web_static/releases/test /data/web_static/current
 
-# Create a symbolic link '/data/web_static/current' linked to the
-# '/data/web_static/releases/test/' folder.
-ln -fs /data/web_static/releases/test/ /data/web_static/current
+sudo chown -R ubuntu:ubuntu /data/
 
-# Give recursive ownership of the '/data/' folder to the 'ubuntu' user AND group
-chown -R ubuntu:ubuntu /data/
+sudo sed -i '/listen 80 default_server;/a \\n\tlocation /hbnb_static {\n\t\talias /data/web_static/current/;\n\t}\n' /etc/nginx/sites-available/default
 
-# Update the Nginx configuration to serve the content of '/data/web_static/current/'
-# to 'hbnb_static' (ex: https://mydomainname.tech/hbnb_static).
-loc_header="location \/hbnb\_static\/ {"
-loc_content="alias \/data\/web\_static\/current\/;"
-new_location="\n\t$loc_header\n\t\t$loc_content\n\t}\n"
-sed -i "37s/$/$new_location/" /etc/nginx/sites-available/default
+sudo service nginx restart
 
-# Restart Nginx
-service nginx restart
+exit 0
